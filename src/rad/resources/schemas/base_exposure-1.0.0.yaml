@@ -9,15 +9,15 @@ title: |
 
 type: object
 properties:
-  type:
-    $ref: asdf://stsci.edu/datamodels/roman/schemas/exposure_type-1.0.0
-    sdf:
-      special_processing: VALUE_REQUIRED
-      source:
-        origin: TBD
-    archive_catalog:
-      datatype: nvarchar(25)
-      destination: [WFIExposure.exposure_type, GuideWindow.exposure_type, WFICommon.exposure_type]
+  # type:
+  #   $ref: asdf://stsci.edu/datamodels/roman/schemas/exposure_type-1.0.0
+  #   sdf:
+  #     special_processing: VALUE_REQUIRED
+  #     source:
+  #       origin: TBD
+  #   archive_catalog:
+  #     datatype: nvarchar(25)
+  #     destination: [WFIExposure.exposure_type, GuideWindow.exposure_type, WFICommon.exposure_type]
   start_time:
     title: Exposure Start Time (UTC)
     description: |
@@ -176,13 +176,13 @@ properties:
     archive_catalog:
       datatype: nvarchar(3500)
       destination: [WFIExposure.read_pattern, GuideWindow.read_pattern, WFICommon.read_pattern]
-propertyOrder: [type, start_time,
-           ngroups, nframes, data_problem,
-           frame_divisor, groupgap, frame_time, group_time, exposure_time,
-           ma_table_name, ma_table_number, read_pattern]
-flowStyle: block
-required: [type, start_time,
-           ngroups, nframes, data_problem,
-           frame_divisor, groupgap, frame_time, group_time, exposure_time,
-           ma_table_name, ma_table_number, read_pattern]
+# propertyOrder: [type, start_time,
+#            ngroups, nframes, data_problem,
+#            frame_divisor, groupgap, frame_time, group_time, exposure_time,
+#            ma_table_name, ma_table_number, read_pattern]
+# flowStyle: block
+# required: [type, start_time,
+#            ngroups, nframes, data_problem,
+#            frame_divisor, groupgap, frame_time, group_time, exposure_time,
+#            ma_table_name, ma_table_number, read_pattern]
 ...

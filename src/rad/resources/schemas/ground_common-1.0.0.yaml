@@ -14,7 +14,17 @@ allOf:
     cal_step:
       tag: asdf://stsci.edu/datamodels/roman/tags/l2_cal_step-1.0.0
     exposure:
-      tag: asdf://stsci.edu/datamodels/roman/tags/base_exposure-1.0.0
+      #tag: asdf://stsci.edu/datamodels/roman/tags/exposure-1.0.0
+      $ref: asdf://stsci.edu/datamodels/roman/schemas/base_exposure-1.0.0
+      type:
+        $ref: asdf://stsci.edu/datamodels/roman/schemas/exposure_type-1.0.0
+        sdf:
+          special_processing: VALUE_REQUIRED
+          source:
+            origin: TBD
+        archive_catalog:
+          datatype: nvarchar(25)
+          destination: [WFIExposure.exposure_type, GuideWindow.exposure_type, WFICommon.exposure_type]
     guidestar:
       tag: asdf://stsci.edu/datamodels/roman/tags/base_guidestar-1.0.0
     instrument:
