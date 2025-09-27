@@ -3,12 +3,16 @@ Test features of the schemas not covered by the metaschema.
 """
 
 from collections.abc import Mapping
+from importlib.resources import files
 from re import match
 
 import asdf
+import asdf.schema
 import asdf.treeutil
 import pytest
 from crds.config import is_crds_name
+
+from rad import resources
 
 METADATA_FORCING_REQUIRED = ("archive_catalog", "sdf")
 
@@ -20,16 +24,15 @@ VARCHAR_XFAILS = (
     # <resource uri>
 )
 
-REF_COMMON_XFAILS = ("asdf://stsci.edu/datamodels/roman/schemas/reference_files/skycells-1.0.0",)
+REF_COMMON_XFAILS = ("asdf://stsci.edu/datamodels/roman/schemas/reference_files/skycells-1.1.0",)
 
 ARRAY_TAG_XFAILS = (
-    "asdf://stsci.edu/datamodels/roman/schemas/l1_detector_guidewindow-1.0.0",
-    "asdf://stsci.edu/datamodels/roman/schemas/l1_detector_guidewindow-1.1.0",
+    # <resource uri>
 )
 
-REQUIRED_SKIPS = ("asdf://stsci.edu/datamodels/roman/schemas/wfi_mosaic-1.3.0",)
+REQUIRED_SKIPS = ("asdf://stsci.edu/datamodels/roman/schemas/wfi_mosaic-1.4.0",)
 
-NESTED_REQUIRED_SKIPS = ("asdf://stsci.edu/datamodels/roman/schemas/l3_common-1.0.0",)
+NESTED_REQUIRED_SKIPS = ("asdf://stsci.edu/datamodels/roman/schemas/l3_common-1.1.0",)
 
 
 class TestSchemaContent:
@@ -297,6 +300,40 @@ class TestSchemaContent:
         """
         assert uri in latest_uris, f"{uri} is not in the list of schemas to be tested."
 
+    def test_no_static_tags(self, schema, latest_static_tags):
+        """
+        Check that the schema does not contain any static tags
+        """
+
+        def callback(node):
+            """Callback to check for static tags"""
+            if isinstance(node, Mapping) and "tag" in node:
+                assert node["tag"] not in latest_static_tags
+
+        asdf.treeutil.walk(schema, callback)
+
+    def test_latest_refs(self, schema, latest_uris, current_resources):
+        """
+        Check that all $ref in the schema point to the latest version of the referenced schema
+        """
+
+        def callback(node):
+            """Callback to check for latest refs"""
+            if isinstance(node, Mapping) and "$ref" in node:
+                ref_uri = node["$ref"]
+                if "#/" in ref_uri:
+                    ref_uri, part_path = ref_uri.split("#/")
+
+                    def_schema = current_resources[ref_uri]
+                    for part in part_path.split("/"):
+                        if part in def_schema:
+                            def_schema = def_schema[part]
+                        else:
+                            raise ValueError(f"Could not find part {part} in schema {ref_uri}")
+                assert ref_uri in latest_uris, f"$ref {node['$ref']} does not point to the latest version of the schema"
+
+        asdf.treeutil.walk(schema, callback)
+
 
 class TestTaggedSchemaContent:
     """
@@ -488,3 +525,40 @@ class TestPatternElementConsistency:
     def test_exposure_types_have_p_exptype_entry(self, p_exptype, exposure_types):
         """Confirm that the p_exptype entry is in the exposure_types enum."""
         assert p_exptype in exposure_types, f"p_exptype {p_exptype} not found in exposure_types."
+
+
+@pytest.fixture(scope="class")
+def asdf_ssc_config():
+    """
+    Fixture to load the SSC schemas into asdf for testing
+    """
+    with asdf.config_context() as config:
+        resource_mapping = asdf.resource.DirectoryResourceMapping(
+            files(resources) / "schemas" / "SSC", "asdf://stsci.edu/datamodels/roman/schemas/SSC/", recursive=True
+        )
+        config.add_resource_mapping(resource_mapping)
+
+        yield config
+
+    # Clear the schema cache to avoid issues with other tests
+    #   ASDF normally caches the loaded schemas so they don't have to be reloaded
+    #   but this creates a problem for the asdf-pytest-plugin, if those tests
+    #   are run after these tests because the loaded schemas will then be cached
+    #   and not fail. But if they are run before these tests then asdf-pytest-plugin
+    #   will fail because the references cannot be resolved through ASDF.
+    asdf.schema._load_schema_cached.cache_clear()
+
+
+class TestSSCSchemas:
+    @pytest.mark.usefixtures("asdf_ssc_config")
+    def test_metaschema(self, ssc_schema_path, ssc_schema_uri):
+        """
+        Test that the SSC Schemas are valid against the metaschema. This has to be done
+        outside the normal asdf-pytest-plugin because we are purposefully excluding them
+        from ASDF by default so they need to be manually loaded into asdf and then validated
+        against the metaschema.
+        """
+        schema = asdf.schema.load_schema(ssc_schema_path, resolve_references=True)
+        assert schema["id"] == ssc_schema_uri
+
+        asdf.schema.check_schema(schema)
